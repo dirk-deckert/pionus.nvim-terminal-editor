@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Add a dedicated Pionus Vim Terminal Editor extension icon.
+
 ## 0.1.1
 
 - Make Vim the default terminal editor.
