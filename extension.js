@@ -73,8 +73,8 @@ function resolveExecutable(name) {
     return undefined;
 }
 
-function resolveNvimPath() {
-    for (const candidate of NVIM_CANDIDATES) {
+function resolveNvimPath(candidates = NVIM_CANDIDATES) {
+    for (const candidate of candidates) {
         if (path.basename(candidate) === candidate) {
             const resolved = resolveExecutable(candidate);
             if (resolved) {
@@ -374,5 +374,12 @@ function deactivate() {}
 
 module.exports = {
     activate,
-    deactivate
+    deactivate,
+    __test: {
+        isExcalidrawPath,
+        localFilePath,
+        resolveExecutable,
+        resolveNvimPath,
+        toNvimByteColumn
+    }
 };

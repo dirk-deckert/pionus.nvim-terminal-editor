@@ -1,0 +1,6 @@
+.github/**
+.gitignore
+AGENTS.md
+SECURITY.md
+test/**
+*.vsix
