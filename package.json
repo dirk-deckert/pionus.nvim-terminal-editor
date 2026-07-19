@@ -1,17 +1,17 @@
 {
-  "name": "nvim-terminal-editor",
-  "displayName": "Pionus Neovim Terminal Editor",
-  "description": "Open the active VS Code file in Neovim inside a terminal editor with Pionus.",
-  "version": "0.0.2",
+  "name": "vim-terminal-editor",
+  "displayName": "Pionus Vim Terminal Editor",
+  "description": "Open the active VS Code file in Vim or Neovim inside a terminal editor with Pionus.",
+  "version": "0.1.0",
   "publisher": "pionus",
   "license": "MIT",
-  "homepage": "https://github.com/dirk-deckert/pionus.nvim-terminal-editor#readme",
+  "homepage": "https://github.com/dirk-deckert/pionus.vim-terminal-editor#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dirk-deckert/pionus.nvim-terminal-editor.git"
+    "url": "https://github.com/dirk-deckert/pionus.vim-terminal-editor.git"
   },
   "bugs": {
-    "url": "https://github.com/dirk-deckert/pionus.nvim-terminal-editor/issues"
+    "url": "https://github.com/dirk-deckert/pionus.vim-terminal-editor/issues"
   },
   "keywords": [
     "pionus",
@@ -27,6 +27,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onCommand:pionus.vimTerminalEditor.openCurrentFile",
     "onCommand:pionus.nvimTerminalEditor.openCurrentFile",
     "onCommand:pionus.nvimDiagnostics.goToFirst",
     "onCommand:pionus.nvimDiagnostics.goToLast",
@@ -44,8 +45,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "pionus.nvimTerminalEditor.openCurrentFile",
-        "title": "Open Current File in Neovim Terminal Editor"
+        "command": "pionus.vimTerminalEditor.openCurrentFile",
+        "title": "Open Current File in Vim Terminal Editor"
       },
       {
         "command": "pionus.nvimDiagnostics.goToFirst",
@@ -63,6 +64,24 @@
         "command": "pionus.renderedPreview.close",
         "title": "Close Rendered Preview"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Pionus Vim Terminal Editor",
+      "properties": {
+        "pionus.vimTerminalEditor.editor": {
+          "type": "string",
+          "enum": [
+            "nvim",
+            "vim"
+          ],
+          "enumDescriptions": [
+            "Use Neovim.",
+            "Use Vim."
+          ],
+          "default": "nvim",
+          "description": "Terminal editor executable to use."
+        }
+      }
+    }
   }
 }

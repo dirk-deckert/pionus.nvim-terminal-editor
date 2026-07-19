@@ -2,12 +2,23 @@ const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
 
-const NVIM_CANDIDATES = [
-    "nvim",
-    "/opt/homebrew/bin/nvim",
-    "/usr/local/bin/nvim",
-    "/usr/bin/nvim"
-];
+const EDITOR_CANDIDATES = {
+    nvim: [
+        "nvim",
+        "/opt/homebrew/bin/nvim",
+        "/usr/local/bin/nvim",
+        "/usr/bin/nvim"
+    ],
+    vim: [
+        "vim",
+        "/opt/homebrew/bin/vim",
+        "/usr/local/bin/vim",
+        "/usr/bin/vim"
+    ]
+};
+
+const OPEN_CURRENT_FILE_COMMAND = "pionus.vimTerminalEditor.openCurrentFile";
+const LEGACY_OPEN_CURRENT_FILE_COMMAND = "pionus.nvimTerminalEditor.openCurrentFile";
 
 const MARKDOWN_LIKE_LANGUAGES = new Set([
     "markdown",
@@ -73,7 +84,7 @@ function resolveExecutable(name) {
     return undefined;
 }
 
-function resolveNvimPath(candidates = NVIM_CANDIDATES) {
+function resolveEditorPath(editorName, candidates = EDITOR_CANDIDATES[editorName] || []) {
     for (const candidate of candidates) {
         if (path.basename(candidate) === candidate) {
             const resolved = resolveExecutable(candidate);
@@ -91,7 +102,7 @@ function resolveNvimPath(candidates = NVIM_CANDIDATES) {
     return undefined;
 }
 
-function toNvimByteColumn(lineText, utf16Column) {
+function toEditorByteColumn(lineText, utf16Column) {
     return Buffer.byteLength(lineText.slice(0, utf16Column), "utf8") + 1;
 }
 
@@ -286,26 +297,30 @@ async function closeRenderedPreview() {
 }
 
 function activate(context) {
-    const disposable = vscode.commands.registerCommand(
-        "pionus.nvimTerminalEditor.openCurrentFile",
-        async () => {
+    const openCurrentFile = async () => {
             const editor = vscode.window.activeTextEditor;
             const filePath = editor ? localFilePath(editor.document) : undefined;
             if (!editor || !filePath) {
-                vscode.window.showWarningMessage("Open a local saved file before launching Neovim.");
+                vscode.window.showWarningMessage("Open a local saved file before launching Vim or Neovim.");
                 return;
             }
 
-            const nvimPath = resolveNvimPath();
-            if (!nvimPath) {
-                vscode.window.showWarningMessage("Neovim was not found on PATH or in common install locations.");
+            const editorName = vscode.workspace
+                .getConfiguration("pionus.vimTerminalEditor")
+                .get("editor", "nvim");
+            const editorPath = resolveEditorPath(editorName);
+            if (!editorPath) {
+                const displayName = editorName === "vim" ? "Vim" : "Neovim";
+                vscode.window.showWarningMessage(
+                    `${displayName} was not found on PATH or in common install locations.`
+                );
                 return;
             }
 
             if (editor.document.isDirty) {
                 const saved = await editor.document.save();
                 if (!saved) {
-                    vscode.window.showWarningMessage("Save the file before launching Neovim.");
+                    vscode.window.showWarningMessage("Save the file before launching the terminal editor.");
                     return;
                 }
             }
@@ -316,10 +331,10 @@ function activate(context) {
             const cursor = editor.selection.active;
             const line = cursor.line + 1;
             const lineText = editor.document.lineAt(cursor.line).text;
-            const byteColumn = toNvimByteColumn(lineText, cursor.character);
+            const byteColumn = toEditorByteColumn(lineText, cursor.character);
             const terminal = vscode.window.createTerminal({
-                name: `nvim ${path.basename(filePath)}`,
-                shellPath: nvimPath,
+                name: `${editorName} ${path.basename(filePath)}`,
+                shellPath: editorPath,
                 shellArgs: [
                     "-c",
                     `call cursor(${line}, ${byteColumn})`,
@@ -346,10 +361,12 @@ function activate(context) {
             });
 
             terminal.show();
-        }
-    );
+        };
 
-    context.subscriptions.push(disposable);
+    context.subscriptions.push(
+        vscode.commands.registerCommand(OPEN_CURRENT_FILE_COMMAND, openCurrentFile),
+        vscode.commands.registerCommand(LEGACY_OPEN_CURRENT_FILE_COMMAND, openCurrentFile)
+    );
     registerDiagnosticNavigationCommand(
         context,
         "pionus.nvimDiagnostics.goToFirst",
@@ -379,7 +396,7 @@ module.exports = {
         isExcalidrawPath,
         localFilePath,
         resolveExecutable,
-        resolveNvimPath,
-        toNvimByteColumn
+        resolveEditorPath,
+        toEditorByteColumn
     }
 };

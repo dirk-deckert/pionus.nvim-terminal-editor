@@ -15,8 +15,21 @@ Module._load = function mockVscode(request, parent, isMain) {
 const { __test } = require("../extension.js");
 Module._load = originalLoad;
 
-test("converts UTF-16 cursor positions to Neovim UTF-8 byte columns", () => {
-    assert.equal(__test.toNvimByteColumn("aéb", 2), 4);
+test("manifest exposes the renamed identity and Vim/Neovim selection", () => {
+    const manifest = require("../package.json");
+    const configuration = manifest.contributes.configuration.properties;
+    const commandIds = manifest.contributes.commands.map(({ command }) => command);
+
+    assert.equal(`${manifest.publisher}.${manifest.name}`, "pionus.vim-terminal-editor");
+    assert.equal(manifest.displayName, "Pionus Vim Terminal Editor");
+    assert.deepEqual(configuration["pionus.vimTerminalEditor.editor"].enum, ["nvim", "vim"]);
+    assert.equal(configuration["pionus.vimTerminalEditor.editor"].default, "nvim");
+    assert.ok(commandIds.includes("pionus.vimTerminalEditor.openCurrentFile"));
+    assert.ok(manifest.activationEvents.includes("onCommand:pionus.nvimTerminalEditor.openCurrentFile"));
+});
+
+test("converts UTF-16 cursor positions to Vim UTF-8 byte columns", () => {
+    assert.equal(__test.toEditorByteColumn("aéb", 2), 4);
 });
 
 test("accepts local and VS Code userdata paths only", () => {
@@ -24,16 +37,19 @@ test("accepts local and VS Code userdata paths only", () => {
     assert.equal(__test.localFilePath({ uri: { scheme: "untitled", fsPath: "/tmp/a" } }), undefined);
 });
 
-test("discovers an executable through PATH, including paths with spaces", () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pionus nvim "));
-    const executable = path.join(directory, "nvim-test");
-    fs.writeFileSync(executable, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+test("discovers configured Vim and Neovim executables through PATH", () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pionus vim "));
+    const nvimExecutable = path.join(directory, "nvim-test");
+    const vimExecutable = path.join(directory, "vim-test");
+    fs.writeFileSync(nvimExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    fs.writeFileSync(vimExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
     const oldPath = process.env.PATH;
     process.env.PATH = directory;
     try {
-        assert.equal(__test.resolveExecutable("nvim-test"), executable);
-        assert.equal(__test.resolveNvimPath(["nvim-test"]), executable);
-        assert.equal(__test.resolveNvimPath([]), undefined);
+        assert.equal(__test.resolveExecutable("nvim-test"), nvimExecutable);
+        assert.equal(__test.resolveEditorPath("nvim", ["nvim-test"]), nvimExecutable);
+        assert.equal(__test.resolveEditorPath("vim", ["vim-test"]), vimExecutable);
+        assert.equal(__test.resolveEditorPath("unknown"), undefined);
     } finally {
         process.env.PATH = oldPath;
         fs.rmSync(directory, { recursive: true });
